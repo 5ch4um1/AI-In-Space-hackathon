@@ -124,7 +124,7 @@ app.post('/api/llm', async (req, res) => {
     }
     
     try {
-        const systemPrompt = customSystemPrompt || "You are an automated land classification satellite AI. You must ONLY output a valid JSON object. Do not output conversational text or markdown blocks.";
+        const systemPrompt = customSystemPrompt || "Satellite image classifier. Output JSON only.";
         
         const payload = {
             model: "LFM2.5-VL-450M-Q4_0.gguf",

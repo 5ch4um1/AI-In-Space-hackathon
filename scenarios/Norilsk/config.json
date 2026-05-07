@@ -9,7 +9,7 @@
         {"name": "tundra", "secondary_mode": "fire_risk"}
     ],
     "system_prompts": {
-        "terrain": "Classify this satellite image: percentages of urban, water body, tundra. Output ONLY JSON: {\"classification\": {\"urban\": float, \"water body\": float, \"tundra\": float}}",
+        "terrain": "Classify this satellite image into land cover percentages. The percentages should sum to 1.0. Avoid zeros and avoid equal distributions.",
         "methane": "Detect methane plume sources. Output ONLY JSON: {\"detected\": boolean, \"bbox\": [x1,y1,x2,y2]}",
         "fire_risk": "Detect fire hotspots. Output ONLY JSON: {\"detected\": boolean, \"bbox\": [x1,y1,x2,y2]}",
         "oil_spill": "Detect oil spills on water. Output ONLY JSON: {\"detected\": boolean, \"bbox\": [x1,y1,x2,y2]}"
