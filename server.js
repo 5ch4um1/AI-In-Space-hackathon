@@ -28,7 +28,7 @@ app.get('/api/scenarios', (req, res) => {
 
 // Get Scenario Config
 app.get('/api/scenarios/:name/config', (req, res) => {
-    const configPath = path.join(__dirname, '../scenarios', req.params.name, 'config.json');
+    const configPath = path.join(__dirname, 'scenarios', req.params.name, 'config.json');
     if (fs.existsSync(configPath)) {
         res.json(JSON.parse(fs.readFileSync(configPath, 'utf-8')));
     } else {
@@ -38,7 +38,7 @@ app.get('/api/scenarios/:name/config', (req, res) => {
 
 // Get Scenario Assets
 app.get('/api/scenarios/:name/assets', (req, res) => {
-    const scenarioDir = path.join(__dirname, '../scenarios', req.params.name);
+    const scenarioDir = path.join(__dirname, 'scenarios', req.params.name);
     try {
         const videosDir = path.join(scenarioDir, 'videos');
         const snapshotsDir = path.join(scenarioDir, 'snapshots');
@@ -58,7 +58,7 @@ app.post('/api/llm', async (req, res) => {
     // Load scenario config to get custom system prompts
     let customSystemPrompt = null;
     if (scenario) {
-        const configPath = path.join(__dirname, '../scenarios', scenario, 'config.json');
+        const configPath = path.join(__dirname, 'scenarios', scenario, 'config.json');
         if (fs.existsSync(configPath)) {
             const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
             if (config.system_prompts) {
@@ -112,7 +112,7 @@ app.post('/api/llm', async (req, res) => {
     if (req.body.base64Image) {
         base64Image = req.body.base64Image;
     } else if (scenario && image) {
-        const imagePath = path.join(__dirname, '../scenarios', scenario, 'snapshots', image);
+        const imagePath = path.join(__dirname, 'scenarios', scenario, 'snapshots', image);
         if (fs.existsSync(imagePath)) {
             const fileData = fs.readFileSync(imagePath);
             base64Image = fileData.toString('base64');
