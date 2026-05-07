@@ -12,7 +12,8 @@
 
 ## 🎥 Demo
 
-*Demo video coming soon — placeholder link will be added once uploaded.*
+[![Thumbnail of a youtube video, a 2 screen capture with a web app in the upper half and 4 terminal windows in the bottom half](https://img.youtube.com/vi/ftkAgWICKLY/0.jpg)](https://www.youtube.com/watch?v=ftkAgWICKLY)
+
 
 ---
 
