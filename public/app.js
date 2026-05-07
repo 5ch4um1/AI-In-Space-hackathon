@@ -388,7 +388,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const classNames = landClasses.map(c => typeof c === 'string' ? c : c.name);
 
             // Step 1: Terrain Classification
-            const prompt1 = `Identify percentages for ${classNames.map(c => `'${c}'`).join(', ')} areas. Respond ONLY with a valid JSON object: {"classification": {${classNames.map(c => `"${c}": float`).join(', ')}}}.`;
+            // Reorder so "urban" is not the first JSON key (model drops it)
+            const reordered = [...classNames].sort((a, b) => a === 'urban' ? 1 : b === 'urban' ? -1 : 0);
+            const prompt1 = `Identify percentages for ${classNames.map(c => `'${c}'`).join(', ')} areas. Respond ONLY with a valid JSON object: {"classification": {${reordered.map(c => `"${c}": float`).join(', ')}}}.`;
             logSystem(`[STEP 1] Classifying scene at T=${videoSecond}s...`);
             
             const payload1 = { prompt: prompt1, timestamp, scenario: currentScenario, image: snapshotFile };
