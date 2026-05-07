@@ -49,9 +49,7 @@ Two secondary processing steps run per primary classification cycle.
 
 ### Getting the mmproj
 
-The mmproj file is **not** included in this repo. You can get it from one of:
-
-1. **Liquid AI's HuggingFace page** (recommended) → [huggingface.co/liquidai](https://huggingface.co/liquidai)
+The mmproj file is **not** included in this repo. Get it from **Liquid AI's HuggingFace page** → [huggingface.co/liquidai](https://huggingface.co/liquidai)
 
 
 Place it at `~/llama.cpp/models/mmproj-LFM2.5-VL-450m-F16.gguf` (or set `LLAMA_MMPROJ` to the correct path).
