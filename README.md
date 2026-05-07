@@ -18,13 +18,13 @@
 
 ## 🧠 Architecture
 
-The system runs **4 fine-tuned LFM 2.5 VL expert models**, each a LoRA adapter applied to the [Liquid AI LFM 2.5 VL](https://huggingface.co/liquidai) base vision-language model that was pre-trained on the [VRSBench](https://huggingface.co/datasets/xiang709/VRSBench) dataset, quantised to **Q4_K_M** and exported to GGUF format via `llama.cpp`.
+The system runs **4 fine-tuned LFM 2.5 VL expert models**, each a LoRA adapter applied to the [Liquid AI LFM 2.5 VL](https://huggingface.co/liquidai) base vision-language model that was itself trained with 2 epochs of LoRa fine-tuning on the [VRSBench](https://huggingface.co/datasets/xiang709/VRSBench) dataset, quantised to **Q4_K_M** and exported to GGUF format via `llama.cpp`.
 
 | Port | Expert         | Task                              | Fine-Tuning Dataset                                                                 |
 |------|----------------|------------------------------------|-------------------------------------------------------------------------------------|
 | 8001 | **Terrain**    | Land cover classification          | [EUROSAT](https://huggingface.co/datasets/torchgeo/eurosat) — Sentinel-2 RGB + multi-spectral |
 | 8002 | **Methane**    | Methane plume detection (land)     | [MethaneS2CM](https://huggingface.co/datasets/H1deaki/MethaneS2CM) — Sentinel-2 CH4 plumes |
-| 8003 | **Marine**     | Maritime / algae / oil detection   | MADOS — maritime observation dataset |
+| 8003 | **Marine**     | Maritime / algae / oil detection   | [MADOS](https://marine-pollution.github.io/) — maritime observation dataset |
 | 8004 | **Fire Risk**  | Fire hotspot & volcanic detection  | [FireWatch SFT](https://huggingface.co/datasets/NuTonic/firewatch-sft-v1) — wildfire + volcanic thermal |
 
 Each model was fine-tuned using **LoRA** on the LFM 2.5 VL 450M base, then merged and quantised. The GGUF files ship with corrected `feed_forward_length = 4608` metadata matching the base model tensor shapes.
