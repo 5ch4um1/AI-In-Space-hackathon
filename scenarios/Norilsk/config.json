@@ -1,0 +1,20 @@
+{
+    "name": "Norilsk Industrial Flyover",
+    "lon": 88.2,
+    "lat": 69.3,
+    "description": "Multispectral satellite flyover of the Norilsk industrial zone, Siberia. One of the world's northernmost industrial complexes.",
+    "land_classes": [
+        {"name": "industrial", "secondary_mode": "methane"},
+        {"name": "urban", "secondary_mode": "methane"},
+        {"name": "water body", "secondary_mode": "oil_spill"},
+        {"name": "forest", "secondary_mode": "fire_risk"},
+        {"name": "tundra", "secondary_mode": "drought"}
+    ],
+    "system_prompts": {
+        "terrain": "Classify this satellite image: percentages of industrial, urban, water body, forest, tundra. Output ONLY JSON: {\"classification\": {\"industrial\": float, \"urban\": float, \"water body\": float, \"forest\": float, \"tundra\": float}}",
+        "methane": "Detect methane plume sources. Output ONLY JSON: {\"detected\": boolean, \"bbox\": [x1,y1,x2,y2]}",
+        "fire_risk": "Detect fire hotspots. Output ONLY JSON: {\"detected\": boolean, \"bbox\": [x1,y1,x2,y2]}",
+        "oil_spill": "Detect oil spills on water. Output ONLY JSON: {\"detected\": boolean, \"bbox\": [x1,y1,x2,y2]}",
+        "drought": "Detect drought stress in vegetation. Output ONLY JSON: {\"detected\": boolean, \"bbox\": [x1,y1,x2,y2]}"
+    }
+}

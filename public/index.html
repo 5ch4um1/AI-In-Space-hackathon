@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NI-IDEA - Satellite Simulation & Image Analysis</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="main-layout" style="display: flex; flex-direction: row; flex: 1; overflow: hidden; padding: 1rem; gap: 1rem;">
+        <div class="left-panel" style="flex: 2; display: flex; flex-direction: column; gap: 1rem; min-width: 0;">
+            <!-- Central Video Display -->
+            <div class="video-container" id="video-container" style="flex: 0 0 auto; width: 100%; aspect-ratio: 16/9; max-height: calc(100vh - 250px);">
+                <video id="main-video" muted playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+                <div class="video-overlay" id="flash-overlay"></div>
+                <div class="crosshair"></div>
+            </div>
+
+            <!-- Multi-band videos row -->
+            <div class="band-videos-container" id="band-videos-container" style="flex: 1; min-height: 120px;">
+                <!-- Small videos generated dynamically here -->
+            </div>
+        </div>
+
+        <!-- Right Panel: Analysis Hub -->
+        <div class="right-panel" style="flex: 1; display: flex; flex-direction: column; gap: 1rem; min-width: 350px;">
+            <div class="panel-section" style="flex: 0 0 auto;">
+                <h3 style="font-size: 0.9rem; color: var(--accent); margin-bottom: 0.75rem;">NI-IDEA: Near Infrared Identification, Detection, Extraction & Analysis</h3>
+                <div id="scenario-selector">
+                    <select id="mission-select">
+                        <option value="">-- Select Mission --</option>
+                    </select>
+
+                </div>
+            </div>
+
+            <div class="panel-section" style="flex: 2;">
+                <div class="image-wrapper" id="processed-image-container">
+                    <img id="processed-image" src="" alt="Waiting for capture..." style="display: none;">
+                    <div id="bounding-boxes"></div>
+                </div>
+            </div>
+
+            <div class="panel-section" style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <h3 style="margin: 0; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">System Log</h3>
+                    <button id="popout-log-btn" style="background: var(--accent); color: #0f172a; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: bold;">POP OUT</button>
+                </div>
+                <div class="log-window" id="system-log"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Panel: Data Displays -->
+    <div class="bottom-panel">
+        <div class="classification-bars" id="classification-bars">
+            <!-- Bars generated dynamically -->
+        </div>
+    </div>
+
+    <script src="app.js?v=21"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+    "name": "Canarias - Tenerife",
+    "lon": -16.6291,
+    "lat": 28.2916,
+    "description": "Multispectral satellite pass over Tenerife, Canary Islands",
+    "land_classes": [
+        {"name": "volcanic", "secondary_mode": "fire_risk"},
+        {"name": "forest", "secondary_mode": "fire_risk"},
+        {"name": "coastal", "secondary_mode": "algae"}
+    ]
+}

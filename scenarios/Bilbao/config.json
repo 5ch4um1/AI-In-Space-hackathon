@@ -1,0 +1,17 @@
+{
+    "name": "Bilbao Flyover",
+    "lon": -2.935,
+    "lat": 43.263,
+    "description": "Multispectral satellite pass over Bilbao and the north coast of Spain",
+    "land_classes": [
+        {"name": "urban", "secondary_mode": "methane"},
+        {"name": "water bodies", "secondary_mode": "algae"},
+        {"name": "rural", "secondary_mode": "fire_risk"}
+    ],
+    "system_prompts": {
+        "terrain": "Classify this satellite image: percentages of urban, water bodies, rural. Output ONLY JSON: {\"classification\": {\"urban\": float, \"water bodies\": float, \"rural\": float}}",
+        "methane": "Detect methane plume sources in urban/industrial areas. Output ONLY JSON: {\"detected\": boolean, \"bbox\": [x1,y1,x2,y2]}",
+        "fire_risk": "Detect fire hotspots in rural/forest areas. Output ONLY JSON: {\"detected\": boolean, \"bbox\": [x1,y1,x2,y2]}",
+        "algae": "Detect algae blooms in water bodies. Output ONLY JSON: {\"detected\": boolean, \"bbox\": [x1,y1,x2,y2]}"
+    }
+}
