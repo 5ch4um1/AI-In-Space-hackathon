@@ -63,7 +63,7 @@ fi
 SERVER="$LLAMA_SERVER"
 MODEL_DIR="$REPO_DIR/models"
 MMPROJ_ARG="--mmproj $LLAMA_MMPROJ"
-COMMON="-c 16384 --temp 0"
+COMMON="-c 16384 --temp 0.1"
 
 launch() {
   local title="$1"
