@@ -101,7 +101,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function updateDownlink(data) {
-        logSystem(`DOWNLINK TELEMETRY: ${JSON.stringify(data, null, 2)}`);
+        const lines = [];
+        lines.push(`DOWNLINK #${Date.now()} | ${data.mission} | ${data.timestamp}`);
+        lines.push(`  POS: ${data.position.lat}N ${data.position.lon}E`);
+        lines.push(`  COVER: ${JSON.stringify(data.classification)}`);
+        data.detections.forEach(d => {
+            lines.push(`  ${d.type}: ${d.detected ? 'ALERT' : 'CLEAR'} ${d.bbox ? JSON.stringify(d.bbox) : ''}`);
+        });
+        logSystem(lines.join('\n'));
     }
 
     async function fetchScenarios() {
@@ -446,6 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Run 2 secondary processing steps per primary cycle
             let bannedModes = [];
             if (lastSecondaryMode) bannedModes.push(lastSecondaryMode);
+            let secondaryResults = [];
 
             for (let step = 0; step < 2; step++) {
                 // Select a candidate with a mode not in bannedModes
@@ -495,11 +503,24 @@ document.addEventListener('DOMContentLoaded', () => {
                             b.appendChild(labelDiv);
                             boundingBoxesContainer.appendChild(b);
                         }
+                        secondaryResults.push({
+                            type: compConfig.analysis_type,
+                            detected: result2.detected || false,
+                            bbox: result2.bbox || null
+                        });
                     }
                 } else {
                     logSystem(`[ERROR] Failed to generate composite for ${candidate.mode}`);
                 }
             }
+
+            updateDownlink({
+                mission: currentScenario,
+                timestamp,
+                position: { lon: currentLon, lat: currentLat },
+                classification: classificationData,
+                detections: secondaryResults
+            });
         } catch (e) {
             logSystem(`[ERROR] Processing Cycle Failed: ${e.message}`);
         } finally {
