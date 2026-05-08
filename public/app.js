@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const classificationBars = document.getElementById('classification-bars');
 
     const mainVideo = document.getElementById('main-video');
+    const playOverlay = document.getElementById('play-overlay');
     const bandVideosContainer = document.getElementById('band-videos-container');
     
     let currentScenario = null;
@@ -235,7 +236,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 logSystem(`Mission ${scenario} completed.`);
             };
             mainVideo.ontimeupdate = handleVideoTimeUpdate;
-            mainVideo.play().catch(e => logSystem("Autoplay prevented. Click to play."));
+            mainVideo.play().catch(() => {
+                playOverlay.style.display = 'flex';
+                logSystem("Autoplay blocked. Click the play button to start.");
+            });
+            playOverlay.onclick = () => {
+                playOverlay.style.display = 'none';
+                mainVideo.play().catch(e => logSystem(`Play failed: ${e.message}`));
+            };
         }
     }
 
