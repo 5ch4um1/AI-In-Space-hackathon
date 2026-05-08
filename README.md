@@ -18,6 +18,13 @@ The frontend, scenarios, and API are hosted on the remote server. You only need 
 
 ---
 
+## 🎥 Hosted App Demo
+
+[![Thumbnail of a youtube video, a 2 screen capture with a web app in the upper half and 4 terminal windows in the bottom half](https://img.youtube.com/vi/ih5mEV6bB0E/0.jpg)](https://www.youtube.com/watch?v=ih5mEV6bB0E)
+
+
+---
+
 ## 🚀 Quick Start (for end users)
 
 **Requirements:** llama.cpp built with `llama-server`, mmproj from [Liquid AI](https://huggingface.co/liquidai), HuggingFace auth.
