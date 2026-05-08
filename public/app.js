@@ -366,7 +366,108 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    let llmHost = 'localhost';
     let isProcessing = false;
+
+    function setLlmHost(host) {
+        llmHost = host || 'localhost';
+    }
+
+    async function loadImageAsBase64(src) {
+        const img = await loadImage(src);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        return canvas.toDataURL('image/jpeg', 0.9);
+    }
+
+    function getLlamaPort(mode) {
+        if (mode === 'terrain') return 8001;
+        if (['oil_spill', 'algae', 'water', 'water_body', 'water_bodies'].includes(mode)) return 8003;
+        if (['fire_risk', 'volcanic'].includes(mode)) return 8004;
+        return 8002;
+    }
+
+    function getSystemPrompt(mode) {
+        if (scenarioConfig && scenarioConfig.system_prompts && scenarioConfig.system_prompts[mode]) {
+            return scenarioConfig.system_prompts[mode];
+        }
+        return "Satellite image classifier. Output JSON only.";
+    }
+
+    async function callLlama(mode, userPrompt, base64Image) {
+        const port = getLlamaPort(mode);
+        const systemPrompt = getSystemPrompt(mode);
+        const url = `http://${llmHost}:${port}/v1/chat/completions`;
+
+        const payload = {
+            model: "LFM2.5-VL-450M-Q4_0.gguf",
+            response_format: { type: "json_object" },
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: [
+                    { type: "text", text: userPrompt },
+                    { type: "image_url", image_url: { url: base64Image } }
+                ]}
+            ],
+            max_tokens: 300
+        };
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`LLM (port ${port}) returned ${response.status}`);
+        }
+
+        const data = await response.json();
+        const llmReply = data.choices[0].message.content;
+
+        let jsonStr = llmReply;
+        if (jsonStr.includes('```json')) {
+            jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
+        } else if (jsonStr.includes('```')) {
+            jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
+        }
+        jsonStr = jsonStr.replace(/```$/, '').trim();
+
+        let firstBrace = jsonStr.indexOf('{');
+        let lastBrace = jsonStr.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+        }
+
+        jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1');
+        jsonStr = jsonStr.replace(/([{\[])\s*,/g, '$1');
+        jsonStr = jsonStr.replace(/;\s*$/g, '');
+
+        let parsed = JSON.parse(jsonStr);
+
+        if (parsed.classification && typeof parsed.classification === 'string') {
+            const clsName = parsed.classification.toLowerCase();
+            parsed.classification = { [clsName]: 1.0 };
+        }
+
+        if (parsed.bbox && Array.isArray(parsed.bbox)) {
+            parsed.bbox = parsed.bbox.map(v => {
+                const n = Number(v);
+                return isNaN(n) ? 0 : Math.max(0, Math.min(1, n));
+            });
+            if (parsed.bbox.length !== 4) {
+                parsed.bbox = [0, 0, 0.1, 0.1];
+            }
+            if (parsed.detected === undefined) {
+                parsed.detected = true;
+            }
+        }
+
+        return parsed;
+    }
 
     async function runCycle(videoSecond) {
         if (isProcessing) return;
@@ -400,13 +501,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const prompt1 = `Classify this satellite image into land cover percentages. Analyze what you see and distribute values between ${reordered.join(', ')}. The percentages should sum to 1.0. Avoid zeros and avoid equal distributions. Output ONLY JSON: {"classification": {${reordered.map(c => `"${c}": float`).join(', ')}}}.`;
             logSystem(`[STEP 1] Classifying scene at T=${videoSecond}s...`);
             
-            const payload1 = { prompt: prompt1, timestamp, scenario: currentScenario, image: snapshotFile };
-
-            const res1 = await fetch('/api/llm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload1) });
-            if (!res1.ok) throw new Error(`LLM Classification failed: ${res1.status}`);
-
-            const data1 = await res1.json();
-            const result1 = JSON.parse(data1.content);
+            const snapshotBase64 = await loadImageAsBase64(`/scenarios/${currentScenario}/snapshots/${snapshotFile}`);
+            const result1 = await callLlama('terrain', prompt1, snapshotBase64);
             logLLM(prompt1, result1);
 
             let classificationData = result1.classification || result1;
@@ -478,37 +574,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (compB64) {
                     processedImage.src = compB64;
-                    const b64Data = compB64.split(',')[1];
-                    const payload2 = { prompt: compConfig.prompt, timestamp, scenario: currentScenario, base64Image: b64Data, secondary_mode: candidate.mode };
+                    const result2 = await callLlama(candidate.mode, compConfig.prompt, compB64);
+                    logLLM(compConfig.prompt, result2);
 
-                    const res2 = await fetch('/api/llm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload2) });
-                    if (res2.ok) {
-                        const data2 = await res2.json();
-                        const result2 = JSON.parse(data2.content);
-                        logLLM(compConfig.prompt, result2);
+                    if (result2.bbox && result2.bbox.length === 4) {
+                        const [x1, y1, x2, y2] = result2.bbox;
+                        const b = document.createElement('div');
+                        b.className = 'bounding-box';
+                        const boxColor = result2.detected ? 'var(--danger)' : 'var(--success)';
+                        b.style.borderColor = boxColor;
+                        b.style.backgroundColor = result2.detected ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)';
+                        b.style.left = `${x1 * 100}%`; b.style.top = `${y1 * 100}%`;
+                        b.style.width = `${(x2 - x1) * 100}%`; b.style.height = `${(y2 - y1) * 100}%`;
 
-                        if (result2.bbox && result2.bbox.length === 4) {
-                            const [x1, y1, x2, y2] = result2.bbox;
-                            const b = document.createElement('div');
-                            b.className = 'bounding-box';
-                            const boxColor = result2.detected ? 'var(--danger)' : 'var(--success)';
-                            b.style.borderColor = boxColor;
-                            b.style.backgroundColor = result2.detected ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)';
-                            b.style.left = `${x1 * 100}%`; b.style.top = `${y1 * 100}%`;
-                            b.style.width = `${(x2 - x1) * 100}%`; b.style.height = `${(y2 - y1) * 100}%`;
-
-                            const labelDiv = document.createElement('div');
-                            labelDiv.style.cssText = `position:absolute;top:0;left:0;background:${boxColor};color:white;font-size:10px;padding:2px 4px;font-weight:bold;text-transform:uppercase;`;
-                            labelDiv.textContent = `${compConfig.analysis_type}: ${result2.detected ? 'DETECTED' : 'CLEAR'}`;
-                            b.appendChild(labelDiv);
-                            boundingBoxesContainer.appendChild(b);
-                        }
-                        secondaryResults.push({
-                            type: compConfig.analysis_type,
-                            detected: result2.detected || false,
-                            bbox: result2.bbox || null
-                        });
+                        const labelDiv = document.createElement('div');
+                        labelDiv.style.cssText = `position:absolute;top:0;left:0;background:${boxColor};color:white;font-size:10px;padding:2px 4px;font-weight:bold;text-transform:uppercase;`;
+                        labelDiv.textContent = `${compConfig.analysis_type}: ${result2.detected ? 'DETECTED' : 'CLEAR'}`;
+                        b.appendChild(labelDiv);
+                        boundingBoxesContainer.appendChild(b);
                     }
+                    secondaryResults.push({
+                        type: compConfig.analysis_type,
+                        detected: result2.detected || false,
+                        bbox: result2.bbox || null
+                    });
                 } else {
                     logSystem(`[ERROR] Failed to generate composite for ${candidate.mode}`);
                 }
@@ -527,6 +616,10 @@ document.addEventListener('DOMContentLoaded', () => {
             isProcessing = false;
         }
     }
+
+    const llmHostInput = document.getElementById('llm-host');
+    llmHostInput.addEventListener('change', () => setLlmHost(llmHostInput.value));
+    setLlmHost(llmHostInput.value);
 
     fetchScenarios();
 });

@@ -41,9 +41,36 @@ Two secondary processing steps run per primary classification cycle.
 
 ---
 
+## 🏗️ Split Architecture
+
+This branch uses a **split architecture** — the frontend/scenarios are hosted on a remote server, while only the 4 heavy llama-server instances run on your local machine.
+
+```
+┌─────────────────────────────┐     ┌──────────────────────────────┐
+│  Remote Server              │     │  Your Machine                │
+│  (hosted by project owner)  │     │  (user provides compute)     │
+│                             │     │                              │
+│  ┌───────────────────────┐  │     │  ┌────────────────────────┐  │
+│  │  Node.js Express      │  │     │  │  llama-server (8001)   │  │
+│  │  · serves frontend    │  │     │  │  Terrain Expert        │  │
+│  │  · serves scenarios   │  │     │  └────────────────────────┘  │
+│  │  · scenario APIs      │  │     │  ┌────────────────────────┐  │
+│  └──────────┬────────────┘  │     │  │  llama-server (8002)   │  │
+│             │               │     │  │  Methane Expert        │  │
+│             │ HTTP          │     │  └────────────────────────┘  │
+│             ▼               │     │  ┌────────────────────────┐  │
+│  ┌───────────────────────┐  │     │  │  llama-server (8003)   │  │
+│  │  Browser (frontend)   │  │     │  │  Marine Expert         │  │
+│  │  fetches scenarios    │──┼─────┼──┤                        │  │
+│  │  from remote server   │  │     │  └────────────────────────┘  │
+│  │  sends LLM requests   │──┼─────┼──► llama-server (8004)   │  │
+│  │  to local llama-servers│  │     │  │  Fire Expert            │  │
+│  └───────────────────────┘  │     │  └────────────────────────┘  │
+└─────────────────────────────┘     └──────────────────────────────┘
+```
+
 ## 📋 Prerequisites
 
-- **Node.js** v18+ and **npm**
 - **llama.cpp** — must be built with the `llama-server` binary
 - **mmproj** — the LFM 2.5 VL multimodal projector file (`mmproj-LFM2.5-VL-450m-F16.gguf`)
 
@@ -51,12 +78,13 @@ Two secondary processing steps run per primary classification cycle.
 
 The mmproj file is **not** included in this repo. Get it from **Liquid AI's HuggingFace page** → [huggingface.co/liquidai](https://huggingface.co/liquidai)
 
-
 Place it at `~/llama.cpp/models/mmproj-LFM2.5-VL-450m-F16.gguf` (or set `LLAMA_MMPROJ` to the correct path).
 
 ---
 
 ## 🚀 Quick Start
+
+### Step 1: Launch the 4 expert models on your machine
 
 ```bash
 git clone https://github.com/5ch4um1/AI-In-Space-hackathon.git
@@ -68,7 +96,9 @@ export TERMINAL=qterminal    # or gnome-terminal, xterm, konsole, etc.
 ./start.sh
 ```
 
-If `TERMINAL` is not set, the script will prompt you to enter one.
+### Step 2: Open the remote web app
+
+Point your browser to the remote server URL (provided by the project owner), enter your machine's IP in the **LLM Host** field, and select a mission.
 
 ### Environment Variables
 
@@ -79,11 +109,7 @@ If `TERMINAL` is not set, the script will prompt you to enter one.
 | `LLAMA_CPP_DIR`  | `$HOME/llama.cpp`                        | llama.cpp installation root    |
 | `LLAMA_MMPROJ`   | `$LLAMA_CPP_DIR/models/mmproj-...`       | Path to mmproj file            |
 
-The script will:
-
-1. Launch 4 `llama-server` instances (ports 8001–8004) in separate terminal windows
-2. Install Node.js dependencies (`npm install`)
-3. Start the web server on **http://localhost:3000**
+The script will launch 4 `llama-server` instances (ports 8001–8004) in separate terminal windows.
 
 ---
 

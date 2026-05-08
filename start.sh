@@ -5,7 +5,12 @@ REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$REPO_DIR"
 
 echo "============================================"
-echo "  NI-IDEA - AI In Space Hackathon"
+echo "  NI-IDEA - LLM Inference Servers"
+echo "============================================"
+echo "  This script launches the 4 expert models."
+echo "  Point your browser to the remote server"
+echo "  URL and enter this machine's IP in the"
+echo "  'LLM Host' field."
 echo "============================================"
 
 # --- TERMINAL ---
@@ -52,12 +57,6 @@ for model in terrain-expert-q4_k_m.gguf methane-expert-q4_k_m.gguf marine-expert
   fi
 done
 echo "All model files present."
-
-# --- NPM INSTALL ---
-if [ ! -d "node_modules" ]; then
-  echo "Installing Node.js dependencies..."
-  npm install
-fi
 
 # --- LAUNCH LLAMA SERVERS ---
 SERVER="$LLAMA_SERVER"
@@ -107,11 +106,8 @@ echo "Launching Fire Expert on port 8004..."
 launch "Fire Expert" "$SERVER -m $MODEL_DIR/fire-expert-q4_k_m.gguf $MMPROJ_ARG $COMMON --port 8004; echo; read -p 'Press Enter to close...'"
 
 echo ""
-echo "Waiting 5 seconds for servers to initialize..."
-sleep 5
-
-# --- START NODE ---
+echo "All 4 llama-server instances launched."
+echo "Open the remote NI-IDEA web app in your browser"
+echo "and enter this machine's IP as the LLM Host."
 echo ""
-echo "Starting Node.js server at http://localhost:3000"
-echo "Press Ctrl+C to stop."
-node server.js
+echo "Your IP: $(hostname -I 2>/dev/null | awk '{print $1}')"
