@@ -23,9 +23,8 @@ The frontend, scenarios, and API are hosted on the remote server. You only need 
 **Requirements:** llama.cpp built with `llama-server`, mmproj from [Liquid AI](https://huggingface.co/liquidai), HuggingFace auth.
 
 ```bash
-git clone https://github.com/5ch4um1/AI-In-Space-hackathon.git
+git clone --branch split-architecture https://github.com/5ch4um1/AI-In-Space-hackathon.git
 cd AI-In-Space-hackathon
-git checkout split-architecture
 chmod +x download_models.sh start.sh
 
 # Authenticate with HuggingFace
@@ -46,9 +45,8 @@ Then open **https://simsat.5ch4um1.es/** in your browser, enter your machine's I
 ## 🚀 Self-Hosted Setup (for running everything yourself)
 
 ```bash
-git clone https://github.com/5ch4um1/AI-In-Space-hackathon.git
+git clone --branch split-architecture https://github.com/5ch4um1/AI-In-Space-hackathon.git
 cd AI-In-Space-hackathon
-git checkout split-architecture
 chmod +x download_models.sh start.sh
 
 # Install Node.js dependencies
