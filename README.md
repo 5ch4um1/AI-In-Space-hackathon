@@ -84,13 +84,23 @@ Place it at `~/llama.cpp/models/mmproj-LFM2.5-VL-450m-F16.gguf` (or set `LLAMA_M
 
 ## 🚀 Quick Start
 
-### Step 1: Launch the 4 expert models on your machine
+### Step 1: Download the 4 expert models
 
 ```bash
 git clone https://github.com/5ch4um1/AI-In-Space-hackathon.git
 cd AI-In-Space-hackathon
-chmod +x start.sh
+chmod +x download_models.sh start.sh
 
+# Authenticate with HuggingFace (required for model download)
+hf auth login
+
+# Download all 4 expert GGUFs (~920 MB total)
+./download_models.sh
+```
+
+### Step 2: Launch the 4 inference servers on your machine
+
+```bash
 # Set your terminal emulator, then run:
 export TERMINAL=qterminal    # or gnome-terminal, xterm, konsole, etc.
 ./start.sh
