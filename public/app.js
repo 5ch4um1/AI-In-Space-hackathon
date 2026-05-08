@@ -156,9 +156,11 @@ document.addEventListener('DOMContentLoaded', () => {
         currentScenario = name;
 
         try {
-            const res = await fetch(`/api/scenarios/${name}/config`);
-            if (res.ok) {
-                scenarioConfig = await res.json();
+            const configRes = await fetch(`/api/scenarios/${name}/config`);
+            const assetsRes = await fetch(`/api/scenarios/${name}/assets`);
+            
+            if (configRes.ok) {
+                scenarioConfig = await configRes.json();
                 baseLon = scenarioConfig.lon || 0;
                 baseLat = scenarioConfig.lat || 0;
 
@@ -177,7 +179,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            const assetsRes = await fetch(`/api/scenarios/${name}/assets`);
             if (assetsRes.ok) {
                 const assets = await assetsRes.json();
                 availableSnapshots = assets.snapshots || [];
@@ -220,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (visualVideoSrc) {
             mainVideo.src = `/scenarios/${scenario}/videos/${visualVideoSrc}`;
-            mainVideo.loop = false; // Do not repeat
+            mainVideo.loop = false;
             mainVideo.onplay = () => {
                 bandVideos.forEach(v => v.play());
                 processingCycleActive = true;
@@ -235,7 +236,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 logSystem(`Mission ${scenario} completed.`);
             };
             mainVideo.ontimeupdate = handleVideoTimeUpdate;
-            mainVideo.play().catch(e => logSystem("Autoplay prevented. Click to play."));
+            mainVideo.oncanplay = () => {
+                mainVideo.play().catch(e => logSystem("Autoplay prevented. Click to play."));
+            };
+            mainVideo.load();
         }
     }
 
@@ -397,7 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Step 1: Terrain Classification
             // Reorder so "urban" is not the first JSON key (model drops it)
             const reordered = [...classNames].sort((a, b) => a === 'urban' ? 1 : b === 'urban' ? -1 : 0);
-            const prompt1 = `Classify this satellite image into land cover percentages. Analyze what you see and distribute values between ${reordered.join(', ')}. The percentages should sum to 1.0. Avoid zeros and avoid equal distributions. Output ONLY JSON: {"classification": {${reordered.map(c => `"${c}": float`).join(', ')}}}.`;
+            const prompt1 = `Satellite image land cover: ${reordered.join(', ')}. Output JSON with float values. {${reordered.map(c => `"${c}": float`).join(', ')}}`;
             logSystem(`[STEP 1] Classifying scene at T=${videoSecond}s...`);
             
             const payload1 = { prompt: prompt1, timestamp, scenario: currentScenario, image: snapshotFile };
@@ -406,12 +410,24 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!res1.ok) throw new Error(`LLM Classification failed: ${res1.status}`);
 
             const data1 = await res1.json();
-            const result1 = JSON.parse(data1.content);
+            logSystem(`[RAW LLM] ${data1.content}`);
+            let result1;
+            try {
+                result1 = JSON.parse(data1.content);
+            } catch (e) {
+                logSystem(`[WARN] Failed to parse classification, using fallback`);
+                const eq = 1 / classNames.length;
+                const cls = {};
+                classNames.forEach(c => cls[c] = eq);
+                result1 = { classification: cls, fallback: true };
+            }
             logLLM(prompt1, result1);
 
             let classificationData = result1.classification || result1;
             classNames.forEach(cls => {
-                let val = classificationData[cls] || 0;
+                let val = classificationData[cls];
+                if (val === undefined) val = classificationData[cls.toLowerCase()];
+                if (val === undefined) val = 0;
                 let pct = val > 1 ? Math.round(val) : Math.round(val * 100);
                 const labelEl = document.getElementById(`label-${cls}`);
                 const barEl = document.getElementById(`bar-${cls}`);
@@ -482,33 +498,39 @@ document.addEventListener('DOMContentLoaded', () => {
                     const payload2 = { prompt: compConfig.prompt, timestamp, scenario: currentScenario, base64Image: b64Data, secondary_mode: candidate.mode };
 
                     const res2 = await fetch('/api/llm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload2) });
+                    let result2 = { detected: false, bbox: [0, 0, 0.1, 0.1], fallback: true };
                     if (res2.ok) {
-                        const data2 = await res2.json();
-                        const result2 = JSON.parse(data2.content);
-                        logLLM(compConfig.prompt, result2);
-
-                        if (result2.bbox && result2.bbox.length === 4) {
-                            const [x1, y1, x2, y2] = result2.bbox;
-                            const b = document.createElement('div');
-                            b.className = 'bounding-box';
-                            const boxColor = result2.detected ? 'var(--danger)' : 'var(--success)';
-                            b.style.borderColor = boxColor;
-                            b.style.backgroundColor = result2.detected ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)';
-                            b.style.left = `${x1 * 100}%`; b.style.top = `${y1 * 100}%`;
-                            b.style.width = `${(x2 - x1) * 100}%`; b.style.height = `${(y2 - y1) * 100}%`;
-
-                            const labelDiv = document.createElement('div');
-                            labelDiv.style.cssText = `position:absolute;top:0;left:0;background:${boxColor};color:white;font-size:10px;padding:2px 4px;font-weight:bold;text-transform:uppercase;`;
-                            labelDiv.textContent = `${compConfig.analysis_type}: ${result2.detected ? 'DETECTED' : 'CLEAR'}`;
-                            b.appendChild(labelDiv);
-                            boundingBoxesContainer.appendChild(b);
+                        try {
+                            const d2 = await res2.json();
+                            logSystem(`[RAW LLM] ${d2.content}`);
+                            result2 = JSON.parse(d2.content);
+                        } catch (e) {
+                            logSystem(`[WARN] Secondary parse failed, using fallback`);
                         }
-                        secondaryResults.push({
-                            type: compConfig.analysis_type,
-                            detected: result2.detected || false,
-                            bbox: result2.bbox || null
-                        });
                     }
+                    logLLM(compConfig.prompt, result2);
+
+                    if (result2.bbox && result2.bbox.length === 4) {
+                        const [x1, y1, x2, y2] = result2.bbox;
+                        const b = document.createElement('div');
+                        b.className = 'bounding-box';
+                        const boxColor = result2.detected ? 'var(--danger)' : 'var(--success)';
+                        b.style.borderColor = boxColor;
+                        b.style.backgroundColor = result2.detected ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)';
+                        b.style.left = `${x1 * 100}%`; b.style.top = `${y1 * 100}%`;
+                        b.style.width = `${(x2 - x1) * 100}%`; b.style.height = `${(y2 - y1) * 100}%`;
+
+                        const labelDiv = document.createElement('div');
+                        labelDiv.style.cssText = `position:absolute;top:0;left:0;background:${boxColor};color:white;font-size:10px;padding:2px 4px;font-weight:bold;text-transform:uppercase;`;
+                        labelDiv.textContent = `${compConfig.analysis_type}: ${result2.detected ? 'DETECTED' : 'CLEAR'}`;
+                        b.appendChild(labelDiv);
+                        boundingBoxesContainer.appendChild(b);
+                    }
+                    secondaryResults.push({
+                        type: compConfig.analysis_type,
+                        detected: result2.detected || false,
+                        bbox: result2.bbox || null
+                    });
                 } else {
                     logSystem(`[ERROR] Failed to generate composite for ${candidate.mode}`);
                 }

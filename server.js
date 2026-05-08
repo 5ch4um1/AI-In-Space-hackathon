@@ -124,16 +124,9 @@ app.post('/api/llm', async (req, res) => {
     }
     
     try {
-        const systemPrompt = customSystemPrompt || "Satellite image classifier. Output JSON only.";
-        
         const payload = {
             model: "LFM2.5-VL-450M-Q4_0.gguf",
-            response_format: { type: "json_object" },
             messages: [
-                {
-                    role: "system",
-                    content: systemPrompt
-                },
                 {
                     role: "user",
                     content: [
@@ -161,29 +154,46 @@ app.post('/api/llm', async (req, res) => {
         const llmReply = data.choices[0].message.content;
         console.log(`[LLM RAW REPLY]:\n${llmReply}\n-----------------------`);
 
-        let jsonStr = llmReply;
-        if (jsonStr.includes('```json')) {
-            jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
-        } else if (jsonStr.includes('```')) {
-            jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
+        // Attempt to repair incomplete/truncated JSON
+        function repairJson(s) {
+            // Strip markdown fences
+            s = s.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+            // Extract only the JSON object
+            let firstBrace = s.indexOf('{');
+            if (firstBrace === -1) return s;
+            s = s.substring(firstBrace);
+            // Count braces and add missing closing braces
+            let depth = 0, closedAt = -1;
+            for (let i = 0; i < s.length; i++) {
+                if (s[i] === '{') depth++;
+                else if (s[i] === '}') depth--;
+                if (depth === 0) { closedAt = i; break; }
+            }
+            if (closedAt === -1) {
+                // Never closed - add missing braces
+                s = s + '}'.repeat(depth);
+            } else {
+                // Truncate after the matching close
+                s = s.substring(0, closedAt + 1);
+            }
+            // Clean trailing commas before braces
+            s = s.replace(/,\s*([}\]])/g, '$1');
+            s = s.replace(/([{\[])\s*,/g, '$1');
+            s = s.replace(/;\s*$/g, '');
+            return s;
         }
 
-        jsonStr = jsonStr.replace(/```$/, '').trim();
+        let jsonStr = repairJson(llmReply);
 
-        let firstBrace = jsonStr.indexOf('{');
-        let lastBrace = jsonStr.lastIndexOf('}');
-        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-            jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+        // Progressive parse attempts (cleaned, re-repaired, raw extracted JSON)
+        let parsed = null;
+        const attempts = [jsonStr, repairJson(llmReply), (llmReply.match(/\{[\s\S]*\}/) || [])[0] || ''];
+        for (const a of attempts) {
+            if (!a) continue;
+            try { parsed = JSON.parse(a); break; } catch (_) {}
         }
 
-        jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1');
-        jsonStr = jsonStr.replace(/([{\[])\s*,/g, '$1');
-        jsonStr = jsonStr.replace(/;\s*$/g, '');
-
-        try {
-            let parsed = JSON.parse(jsonStr);
-
-            // Fix case where classification is a string instead of object
+        if (parsed) {
             if (parsed.classification && typeof parsed.classification === 'string') {
                 const clsName = parsed.classification.toLowerCase();
                 parsed.classification = { [clsName]: 1.0 };
@@ -202,11 +212,10 @@ app.post('/api/llm', async (req, res) => {
                 }
             }
 
-            jsonStr = JSON.stringify(parsed);
-            res.json({ content: jsonStr });
-        } catch (e) {
-            console.error(`JSON Parse failed on LLM reply. Extracted string: ${jsonStr}`);
-            return res.status(502).json({ error: `LLM generated an invalid JSON format`, raw_reply: llmReply });
+            res.json({ content: JSON.stringify(parsed) });
+        } else {
+            console.error(`JSON Parse failed on LLM reply. Raw: ${llmReply}`);
+            res.json({ content: JSON.stringify({ fallback: true }) });
         }
     } catch (error) {
         console.error(`LLM Network Request Failed: ${error.message}`);
