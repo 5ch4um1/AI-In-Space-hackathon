@@ -45,8 +45,6 @@ echo "[4/4] Fire Expert (FireWatch)..."
 hf download 5ch4um1/lfm2.5-vrsbench-firewatch-sft-lora-450m \
     fire-expert-q4_k_m.gguf \
     --local-dir "$MODEL_DIR" --quiet
-mv "$MODEL_DIR/fire-expert-q4_k_m.gguf" \
-   "$MODEL_DIR/fire-expert-q4_k_m.gguf"
 
 echo ""
 echo "All models downloaded to $MODEL_DIR"
