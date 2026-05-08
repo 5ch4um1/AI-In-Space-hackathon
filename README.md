@@ -8,6 +8,8 @@
 
 > Satellite Simulation & Image Analysis Platform with 4 fine-tuned LFM 2.5 VL expert models for real-time multispectral satellite image analysis.
 
+> **💡 Partially hosted version available:** See the [`split-architecture`](https://github.com/5ch4um1/AI-In-Space-hackathon/tree/split-architecture) branch — the frontend is hosted at [simsat.5ch4um1.es](https://simsat.5ch4um1.es/), you only run the 4 LLM servers locally.
+
 ---
 
 ## 🎥 Demo
