@@ -45,7 +45,7 @@ export TERMINAL=qterminal
 ./start.sh
 ```
 
-Then open **https://simsat.5ch4um1.es/** in your browser, enter your machine's IP in the **LLM Host** field, select a mission, and click play.
+Then open **https://simsat.5ch4um1.es/** in your browser, use the default "localhost" or enter your machine's IP in the **LLM Host** field, select a mission, and click play.
 
 ---
 
