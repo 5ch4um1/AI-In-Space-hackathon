@@ -236,14 +236,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 logSystem(`Mission ${scenario} completed.`);
             };
             mainVideo.ontimeupdate = handleVideoTimeUpdate;
-            mainVideo.play().catch(() => {
-                playOverlay.style.display = 'flex';
-                logSystem("Autoplay blocked. Click the play button to start.");
-            });
+            mainVideo.oncanplay = () => {
+                mainVideo.play().catch(() => {
+                    playOverlay.style.display = 'flex';
+                    logSystem("Autoplay blocked. Click the play button to start.");
+                });
+            };
             playOverlay.onclick = () => {
                 playOverlay.style.display = 'none';
                 mainVideo.play().catch(e => logSystem(`Play failed: ${e.message}`));
             };
+            mainVideo.load();
         }
     }
 
@@ -398,23 +401,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return 8002;
     }
 
-    function getSystemPrompt(mode) {
-        if (scenarioConfig && scenarioConfig.system_prompts && scenarioConfig.system_prompts[mode]) {
-            return scenarioConfig.system_prompts[mode];
-        }
-        return "Satellite image classifier. Output JSON only.";
-    }
-
     async function callLlama(mode, userPrompt, base64Image) {
         const port = getLlamaPort(mode);
-        const systemPrompt = getSystemPrompt(mode);
         const url = `http://${llmHost}:${port}/v1/chat/completions`;
 
         const payload = {
             model: "LFM2.5-VL-450M-Q4_0.gguf",
-            response_format: { type: "json_object" },
             messages: [
-                { role: "system", content: systemPrompt },
                 { role: "user", content: [
                     { type: "text", text: userPrompt },
                     { type: "image_url", image_url: { url: base64Image } }
@@ -430,31 +423,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (!response.ok) {
-            throw new Error(`LLM (port ${port}) returned ${response.status}`);
+            logSystem(`[WARN] LLM (port ${port}) returned ${response.status}, using fallback`);
+            return { fallback: true };
         }
 
         const data = await response.json();
         const llmReply = data.choices[0].message.content;
+        logSystem(`[RAW LLM] ${llmReply}`);
 
-        let jsonStr = llmReply;
-        if (jsonStr.includes('```json')) {
-            jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
-        } else if (jsonStr.includes('```')) {
-            jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
+        function repairJson(s) {
+            s = s.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+            let firstBrace = s.indexOf('{');
+            if (firstBrace === -1) return s;
+            s = s.substring(firstBrace);
+            let depth = 0, closedAt = -1;
+            for (let i = 0; i < s.length; i++) {
+                if (s[i] === '{') depth++;
+                else if (s[i] === '}') depth--;
+                if (depth === 0) { closedAt = i; break; }
+            }
+            if (closedAt === -1) s = s + '}'.repeat(depth);
+            else s = s.substring(0, closedAt + 1);
+            s = s.replace(/,\s*([}\]])/g, '$1');
+            s = s.replace(/([{\[])\s*,/g, '$1');
+            s = s.replace(/;\s*$/g, '');
+            return s;
         }
-        jsonStr = jsonStr.replace(/```$/, '').trim();
 
-        let firstBrace = jsonStr.indexOf('{');
-        let lastBrace = jsonStr.lastIndexOf('}');
-        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-            jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+        let jsonStr = repairJson(llmReply);
+        let parsed = null;
+        const attempts = [jsonStr, repairJson(llmReply), (llmReply.match(/\{[\s\S]*\}/) || [])[0] || ''];
+        for (const a of attempts) {
+            if (!a) continue;
+            try { parsed = JSON.parse(a); break; } catch (_) {}
         }
 
-        jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1');
-        jsonStr = jsonStr.replace(/([{\[])\s*,/g, '$1');
-        jsonStr = jsonStr.replace(/;\s*$/g, '');
-
-        let parsed = JSON.parse(jsonStr);
+        if (!parsed) {
+            logSystem(`[WARN] JSON parse failed, using fallback`);
+            return { fallback: true };
+        }
 
         if (parsed.classification && typeof parsed.classification === 'string') {
             const clsName = parsed.classification.toLowerCase();
@@ -506,7 +513,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Step 1: Terrain Classification
             // Reorder so "urban" is not the first JSON key (model drops it)
             const reordered = [...classNames].sort((a, b) => a === 'urban' ? 1 : b === 'urban' ? -1 : 0);
-            const prompt1 = `Classify this satellite image into land cover percentages. Analyze what you see and distribute values between ${reordered.join(', ')}. The percentages should sum to 1.0. Avoid zeros and avoid equal distributions. Output ONLY JSON: {"classification": {${reordered.map(c => `"${c}": float`).join(', ')}}}.`;
+            const prompt1 = `Satellite image land cover: ${reordered.join(', ')}. Output JSON with float values. {${reordered.map(c => `"${c}": float`).join(', ')}}`;
             logSystem(`[STEP 1] Classifying scene at T=${videoSecond}s...`);
             
             const snapshotBase64 = await loadImageAsBase64(`/scenarios/${currentScenario}/snapshots/${snapshotFile}`);
