@@ -74,7 +74,7 @@ export TERMINAL=qterminal    # or gnome-terminal, xterm, konsole, etc.
 ./start.sh
 ```
 
-> **Why `setup.sh`?** The models (GGUFs) and scenario data (videos, snapshots) total ~2.7 GB, exceeding GitHub's free LFS tier (1 GB). We moved these assets to external downloads — models from HuggingFace, scenarios from [simsat.5ch4um1.es](https://simsat.5ch4um1.es) — and removed them from git tracking.
+> **Why `setup.sh`?** The models (GGUFs) and scenario data (videos, snapshots) total ~2.7 GB, exceeding GitHub's free LFS tier (10 GB). We moved these assets to external downloads — models from HuggingFace, scenarios from [simsat.5ch4um1.es](https://simsat.5ch4um1.es) — and removed them from git tracking.
 
 ### Environment Variables
 
