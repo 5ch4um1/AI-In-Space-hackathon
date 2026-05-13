@@ -94,22 +94,22 @@ The script will:
 
 ```
 AI-In-Space-hackathon/
+├── setup.sh              ← Downloads models + scenarios (run first!)
 ├── start.sh              ← One-command launcher
 ├── server.js             ← Express backend / routing
 ├── package.json          ← Node.js dependencies
 ├── README.md             ← You are here
-├── .gitattributes        ← Git LFS tracking (*.gguf, *.mp4, *.png)
 ├── .gitignore
 ├── public/               ← Frontend (HTML, JS, CSS)
 │   ├── index.html
 │   ├── app.js
 │   └── style.css
-├── models/               ← Expert model GGUFs (via Git LFS)
+├── models/               ← Expert model GGUFs (via setup.sh)
 │   ├── terrain-expert-q4_k_m.gguf
 │   ├── methane-expert-q4_k_m.gguf
 │   ├── marine-expert-q4_k_m.gguf
 │   └── fire-expert-q4_k_m.gguf
-└── scenarios/            ← Mission data (videos + snapshots, via Git LFS)
+└── scenarios/            ← Mission data (videos + snapshots, via setup.sh)
     ├── Bilbao/
     ├── Canarias/
     ├── IndustrialEurope/
