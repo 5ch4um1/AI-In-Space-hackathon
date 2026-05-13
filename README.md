@@ -64,14 +64,17 @@ Place it at `~/llama.cpp/models/mmproj-LFM2.5-VL-450m-F16.gguf` (or set `LLAMA_M
 ```bash
 git clone https://github.com/5ch4um1/AI-In-Space-hackathon.git
 cd AI-In-Space-hackathon
-chmod +x start.sh
+chmod +x setup.sh start.sh
+
+# Download models and scenarios (~2.7 GB total)
+./setup.sh
 
 # Set your terminal emulator, then run:
 export TERMINAL=qterminal    # or gnome-terminal, xterm, konsole, etc.
 ./start.sh
 ```
 
-If `TERMINAL` is not set, the script will prompt you to enter one.
+> **Why `setup.sh`?** The models (GGUFs) and scenario data (videos, snapshots) total ~2.7 GB, exceeding GitHub's free LFS tier (1 GB). We moved these assets to external downloads — models from HuggingFace, scenarios from [simsat.5ch4um1.es](https://simsat.5ch4um1.es) — and removed them from git tracking.
 
 ### Environment Variables
 
