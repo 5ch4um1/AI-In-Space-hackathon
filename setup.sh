@@ -67,7 +67,7 @@ if [ -d "$SCENARIOS_DIR" ]; then
     echo "  (delete $SCENARIOS_DIR to force re-download)"
 else
     echo "Downloading scenarios.zip..."
-    curl -fSL "$SCENARIOS_ZIP_URL" -o "$SCENARIOS_TMP"
+    curl -fSLk "$SCENARIOS_ZIP_URL" -o "$SCENARIOS_TMP"
     echo "Extracting..."
     unzip -q "$SCENARIOS_TMP" -d "$REPO_DIR"
     rm -f "$SCENARIOS_TMP"
